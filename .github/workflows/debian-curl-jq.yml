@@ -1,0 +1,35 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Build and push : Debian - curl + jq
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [ master ]
+  schedule:
+    - cron:  "30 5 * * *"
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build the image
+        run: |
+          docker build debian-curl-jq/ --tag ${{ secrets.DOCKER_HUB_USERNAME }}/curl-jq:latest
+          CURL_VERSION=curl-$(docker run ${{ secrets.DOCKER_HUB_USERNAME }}/curl-jq:latest curl --version | head -n 1 | awk '{ print $2 }')
+          docker build debian-curl-jq/ --tag ${{ secrets.DOCKER_HUB_USERNAME }}/curl-jq:${CURL_VERSION}
+          JQ_VERSION=$(docker run ${{ secrets.DOCKER_HUB_USERNAME }}/curl-jq:latest jq --version | sed 's|\(.*\)-.*|\1|')
+          docker build debian-curl-jq/ --tag ${{ secrets.DOCKER_HUB_USERNAME }}/curl-jq:${JQ_VERSION}
+
+      - name: Push the image
+        run: |
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/curl-jq --all-tags
