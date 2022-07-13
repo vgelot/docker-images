@@ -1,0 +1,33 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Build and push google cloud sdk kubectl helm yq
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [ master ]
+  schedule:
+    - cron:  "30 5 * * *"
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build the image
+        run: |
+          docker build alpine-google-sdk-kubectl-helm-yq/ --tag ${{ secrets.DOCKER_HUB_USERNAME }}/alpine-google-sdk-kubectl-helm-yq:latest
+          GOOGLE_SDK_VERSION=392.0.0
+          docker build alpine-google-sdk-kubectl-helm-yq/ --tag ${{ secrets.DOCKER_HUB_USERNAME }}/alpine-google-sdk-kubectl-helm-yq:${GOOGLE_SDK_VERSION}
+
+      - name: Push the image
+        run: |
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/alpine-google-sdk-kubectl-helm-yq --all-tags
