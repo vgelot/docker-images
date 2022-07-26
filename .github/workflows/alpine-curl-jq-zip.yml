@@ -1,0 +1,34 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Build and push alpine curl jq and zip
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [ master ]
+  schedule:
+    - cron:  "30 5 * * *"
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build the image
+        run: |
+          docker build alpine-curl-jq-zip/ --tag ${{ secrets.DOCKER_HUB_USERNAME }}/alpine-curl-jq-zip:latest
+          CURL_VERSION=curl-$(docker run ${{ secrets.DOCKER_HUB_USERNAME }}/alpine-curl-jq-zip:latest curl --version | head -n 1 | awk '{ print $2 }')
+          docker build alpine-curl-jq-zip/ --tag ${{ secrets.DOCKER_HUB_USERNAME }}/alpine-curl-jq-zip:${CURL_VERSION}
+          JQ_VERSION=$(docker run ${{ secrets.DOCKER_HUB_USERNAME }}/alpine-curl-jq-zip:latest jq --version | sed 's|\(.*\)-.*|\1|')
+          docker build alpine-curl-jq-zip/ --tag ${{ secrets.DOCKER_HUB_USERNAME }}/alpine-curl-jq-zip:${JQ_VERSION}
+      - name: Push the image
+        run: |
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/alpine-google-sdk-helm --all-tags
